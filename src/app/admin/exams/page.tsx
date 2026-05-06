@@ -7,6 +7,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Plus, Pencil, Trash2, Loader2, Key } from "lucide-react"
+import { useSortableData } from "@/lib/useSortableData"
+import { SortableTableHead } from "@/components/ui/sortable-table-head"
 
 export default function ExamsPage() {
   const [exams, setExams] = useState<any[]>([])
@@ -16,10 +18,13 @@ export default function ExamsPage() {
   const [formData, setFormData] = useState({ name: "", date: new Date().toISOString().split('T')[0], access_code: "" })
   const supabase = createClient()
   useEffect(() => { fetchExams() }, [])
-  const fetchExams = async () => { setLoading(true); const { data } = await supabase.from('exams').select('*').order('created_at', { ascending: false }); if (data) setExams(data); setLoading(false) }
+  const fetchExams = async () => { setLoading(true); const { data } = await supabase.from('exams').select('*').limit(100); if (data) setExams(data); setLoading(false) }
+
+  const { items: sortedExams, requestSort, sortConfig } = useSortableData(exams, { key: 'created_at', direction: 'desc' })
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (editingExam) { await supabase.from('exams').update(formData).eq('id', editingExam.id) } else { await supabase.from('exams').insert([formData]) }
+    if (editingExam) { await supabase.from('exams').update(formData as never).eq('id', editingExam.id) } else { await supabase.from('exams').insert([formData as never]) }
     setOpen(false); fetchExams()
   }
   return (
@@ -33,8 +38,13 @@ export default function ExamsPage() {
         </form></DialogContent></Dialog></div>
       <Card><CardContent className="p-0">
         {loading ? <div className="p-8 flex justify-center"><Loader2 className="animate-spin" /></div> : (
-          <Table><TableHeader><TableRow><TableHead>Nama Ujian</TableHead><TableHead>Tanggal</TableHead><TableHead>Access Code</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader>
-          <TableBody>{exams.map(exam => (<TableRow key={exam.id}><TableCell>{exam.name}</TableCell><TableCell>{exam.date}</TableCell><TableCell>{exam.access_code}</TableCell>
+          <Table><TableHeader><TableRow>
+            <SortableTableHead sortKey="name" sortConfig={sortConfig} requestSort={requestSort}>Nama Ujian</SortableTableHead>
+            <SortableTableHead sortKey="date" sortConfig={sortConfig} requestSort={requestSort}>Tanggal</SortableTableHead>
+            <SortableTableHead sortKey="access_code" sortConfig={sortConfig} requestSort={requestSort}>Access Code</SortableTableHead>
+            <TableHead className="text-right">Aksi</TableHead>
+            </TableRow></TableHeader>
+          <TableBody>{sortedExams.map(exam => (<TableRow key={exam.id}><TableCell>{exam.name}</TableCell><TableCell>{exam.date}</TableCell><TableCell>{exam.access_code}</TableCell>
             <TableCell className="text-right flex justify-end gap-2"><Button variant="ghost" size="icon" onClick={() => { setEditingExam(exam); setFormData({ name: exam.name, date: exam.date, access_code: exam.access_code }); setOpen(true) }}><Pencil size={16} /></Button>
             <Button variant="ghost" size="icon" onClick={async () => { if(confirm("Hapus?")) { await supabase.from('exams').delete().eq('id', exam.id); fetchExams() } }}><Trash2 size={16} /></Button></TableCell></TableRow>))}</TableBody></Table>
         )}
