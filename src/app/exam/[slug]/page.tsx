@@ -20,7 +20,7 @@ export default function AssessmentPage() {
       const { data: examData } = await supabase.from('exams').select('*').eq('access_code', slug).single()
       if (examData) {
         setExam(examData)
-        const { data: stationsData } = await supabase.from('stations').select('*, rubrics(id, title, rubric_items(*))').eq('exam_id', examData.id)
+        const { data: stationsData } = await supabase.from('stations').select('*, rubrics(id, title, rubric_items(*))').eq('exam_id', (examData as any).id)
         const { data: participantsData } = await supabase.from('participants').select('*')
         if (stationsData) setStations(stationsData as any)
         if (participantsData) { setExaminers(participantsData.filter((p:any) => p.role === 'examiner')); setStudents(participantsData.filter((p:any) => p.role === 'student')) }
@@ -44,7 +44,7 @@ export default function AssessmentPage() {
     const station = stations.find(s => s.id === selectedStationId)
     let ts = 0, ms = 0
     station.rubrics.rubric_items.forEach((item:any) => { ts += (scores[item.id] || 0) * item.weight; ms += item.max_scale * item.weight })
-    const { error } = await supabase.from('submissions').insert([{ exam_id: exam.id, station_id: selectedStationId, student_id: selectedStudentId, examiner_id: selectedExaminerId, scores, normalized_score: (ts/ms)*100 }])
+    const { error } = await supabase.from('submissions').insert([{ exam_id: exam?.id, station_id: selectedStationId, student_id: selectedStudentId, examiner_id: selectedExaminerId, scores, normalized_score: (ts/ms)*100 } as never])
     if (!error) setSuccessOpen(true)
     setSubmitting(false)
   }

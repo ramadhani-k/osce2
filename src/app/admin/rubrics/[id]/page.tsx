@@ -18,7 +18,7 @@ export default function RubricDetailsPage() {
   const fetchRubricAndItems = async () => { setLoading(true); const { data: rubricData } = await supabase.from('rubrics').select('*').eq('id', id).single(); const { data: itemsData } = await supabase.from('rubric_items').select('*').eq('rubric_id', id).order('order_index', { ascending: true }); if (rubricData) setRubric(rubricData); if (itemsData) setItems(itemsData); setLoading(false) }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (editingItem) { await supabase.from('rubric_items').update(formData).eq('id', editingItem.id) } else { await supabase.from('rubric_items').insert([{ ...formData, rubric_id: id as string, order_index: items.length }]) }
+    if (editingItem) { await supabase.from('rubric_items').update(formData as never).eq('id', editingItem.id) } else { await supabase.from('rubric_items').insert([{ ...formData, rubric_id: id as string, order_index: items.length } as never]) }
     setOpen(false); fetchRubricAndItems()
   }
   if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>

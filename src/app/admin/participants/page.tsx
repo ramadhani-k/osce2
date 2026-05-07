@@ -8,6 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Pencil, Trash2, Loader2, UserPlus } from "lucide-react"
+import { useSortableData } from "@/lib/useSortableData"
+import { SortableTableHead } from "@/components/ui/sortable-table-head"
 
 export default function ParticipantsPage() {
   const [participants, setParticipants] = useState<any[]>([])
@@ -17,10 +19,13 @@ export default function ParticipantsPage() {
   const [formData, setFormData] = useState({ name: "", identifier: "", role: "student" as "student" | "examiner" })
   const supabase = createClient()
   useEffect(() => { fetchParticipants() }, [])
-  const fetchParticipants = async () => { setLoading(true); const { data } = await supabase.from('participants').select('*').order('name', { ascending: true }); if (data) setParticipants(data); setLoading(false) }
+  const fetchParticipants = async () => { setLoading(true); const { data } = await supabase.from('participants').select('*').limit(100); if (data) setParticipants(data); setLoading(false) }
+
+  const { items: sortedParticipants, requestSort, sortConfig } = useSortableData(participants, { key: 'name', direction: 'asc' })
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (editingParticipant) { await supabase.from('participants').update(formData).eq('id', editingParticipant.id) } else { await supabase.from('participants').insert([formData]) }
+    if (editingParticipant) { await supabase.from('participants').update(formData as never).eq('id', editingParticipant.id) } else { await supabase.from('participants').insert([formData as never]) }
     setOpen(false); fetchParticipants()
   }
   return (
@@ -34,8 +39,13 @@ export default function ParticipantsPage() {
         </form></DialogContent></Dialog></div>
       <Card><CardContent className="p-0">
         {loading ? <div className="p-8 flex justify-center"><Loader2 className="animate-spin" /></div> : (
-          <Table><TableHeader><TableRow><TableHead>Nama</TableHead><TableHead>NIM/NIP</TableHead><TableHead>Peran</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader>
-          <TableBody>{participants.map(p => (<TableRow key={p.id}><TableCell>{p.name}</TableCell><TableCell>{p.identifier}</TableCell><TableCell>{p.role}</TableCell>
+          <Table><TableHeader><TableRow>
+            <SortableTableHead sortKey="name" sortConfig={sortConfig} requestSort={requestSort}>Nama</SortableTableHead>
+            <SortableTableHead sortKey="identifier" sortConfig={sortConfig} requestSort={requestSort}>NIM/NIP</SortableTableHead>
+            <SortableTableHead sortKey="role" sortConfig={sortConfig} requestSort={requestSort}>Peran</SortableTableHead>
+            <TableHead className="text-right">Aksi</TableHead>
+            </TableRow></TableHeader>
+          <TableBody>{sortedParticipants.map(p => (<TableRow key={p.id}><TableCell>{p.name}</TableCell><TableCell>{p.identifier}</TableCell><TableCell>{p.role}</TableCell>
             <TableCell className="text-right flex justify-end gap-2"><Button variant="ghost" size="icon" onClick={() => { setEditingParticipant(p); setFormData({ name: p.name, identifier: p.identifier, role: p.role }); setOpen(true) }}><Pencil size={16} /></Button>
             <Button variant="ghost" size="icon" onClick={async () => { if(confirm("Hapus?")) { await supabase.from('participants').delete().eq('id', p.id); fetchParticipants() } }}><Trash2 size={16} /></Button></TableCell></TableRow>))}</TableBody></Table>
         )}
